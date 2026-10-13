@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ankara Garı 3B Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#dfe7ef; --surface:rgba(255,255,255,.92); --ink:#17243a; --muted:#5d6b7e; --line:#c9d1db;
+  --sign:#1f4e9c; --sign-ink:#ffffff; --amber:#c98a00;
+  --board-bg:#13233b; --board-ink:#ffc93c; --board-dim:#8ea3c0;
+  color-scheme:light;
+  box-sizing:border-box; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1726; --surface:rgba(22,35,58,.92); --ink:#e6ecf3; --muted:#93a4ba; --line:#2a3b57;
+    --sign:#6f9eea; --sign-ink:#0e1726; --amber:#ffc93c;
+    --board-bg:#0a1220; --board-ink:#ffc93c; --board-dim:#7d90ab;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1726; --surface:rgba(22,35,58,.92); --ink:#e6ecf3; --muted:#93a4ba; --line:#2a3b57;
+  --sign:#6f9eea; --sign-ink:#0e1726; --amber:#ffc93c;
+  --board-bg:#0a1220; --board-ink:#ffc93c; --board-dim:#7d90ab;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0}
+*,*::before,*::after{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;overflow:hidden}
+#stage{position:fixed;inset:0;touch-action:none}
+#stage canvas{display:block;width:100%;height:100%;cursor:grab}
+#stage canvas:active{cursor:grabbing}
+.title{position:fixed;left:16px;top:calc(14px + env(safe-area-inset-top,0px));max-width:min(420px,calc(100% - 32px));pointer-events:none}
+.title h1{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;font-size:clamp(24px,3.4vw,34px);line-height:1;margin:0}
+.title .plate{display:inline-block;background:var(--sign);color:var(--sign-ink);padding:3px 10px 5px;border-radius:4px;margin-right:8px}
+.title p{margin:6px 0 0;font-size:14px;color:var(--ink);background:var(--surface);padding:6px 10px;border-radius:6px;display:inline-block}
+.board{position:fixed;right:16px;top:calc(14px + env(safe-area-inset-top,0px));width:340px;background:var(--board-bg);color:var(--board-ink);border-radius:8px;padding:12px 14px;font-family:"Barlow Condensed","Arial Narrow",sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.board .bt{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.board .clock{font-size:34px;font-weight:700;line-height:1;letter-spacing:.03em}
+.board .bt span{color:var(--board-dim);font-size:15px}
+.board table{width:100%;border-collapse:collapse;font-size:17px}
+.board th{color:var(--board-dim);font-weight:500;text-align:left;font-size:13px;padding:0 4px 3px}
+.board td{padding:5px 4px;border-top:1px solid rgba(142,163,192,.22);white-space:nowrap}
+.board td.st{font-size:15px}
+.board .s-come{color:#9be3b5}.board .s-in{color:#ffffff}.board .s-out{color:#ff9aa4}.board .s-idle{color:var(--board-dim)}
+.board .tot{display:flex;gap:14px;margin-top:8px;color:var(--board-dim);font-size:15px}
+.board .tot b{color:var(--board-ink);font-size:18px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+.bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-wrap:wrap;justify-content:center;gap:8px 14px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 12px;max-width:calc(100% - 24px);box-shadow:0 6px 24px rgba(0,0,0,.15)}
+.grp{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+button{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:6px;padding:5px 11px;cursor:pointer}
+button.on{background:var(--sign);color:var(--sign-ink);border-color:var(--sign)}
+button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{border:0;border-radius:0;padding:5px 10px}
+.hint{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));font-size:13px;color:var(--muted);background:var(--surface);padding:5px 9px;border-radius:6px}
+#boardToggle{display:none}
+@media (max-width:760px){
+  .board{left:12px;right:12px;width:auto;top:auto;bottom:calc(118px + env(safe-area-inset-bottom,0px));font-size:15px;display:none}
+  .board.open{display:block}
+  #boardToggle{display:inline-block}
+  .hint{display:none}
+  .title p{display:none}
+}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="Ankara Garı üç boyutlu modeli: trenler gara girer, durur, yolcular iner ve biner, tren kalkar" role="img"></div>
+
+<div class="title">
+  <h1><span class="plate">Ankara Garı</span>3B model</h1>
+  <p>Trenler gara girer, kapılar açılır, yolcular iner ve biner, tren kalkar.</p>
+</div>
+
+<div class="board" id="board">
+  <div class="bt"><div class="clock" id="clock">08:00</div><span>Peron durumu</span></div>
+  <table><thead><tr><th>Peron</th><th>Sefer</th><th>Durum</th></tr></thead><tbody id="rows"></tbody></table>
+  <div class="tot"><span>İnen <b id="tOff">0</b></span><span>Binen <b id="tOn">0</b></span><span>Kalkan tren <b id="tDep">0</b></span></div>
+</div>
+
+<div class="bar" role="group" aria-label="Görünüm ve hız">
+  <button id="play" class="on">Duraklat</button>
+  <span class="grp">Hız <span class="seg" id="speedSeg"><button data-v="0.5">½×</button><button data-v="1" class="on">1×</button><button data-v="2">2×</button><button data-v="4">4×</button></span></span>
+  <span class="grp">Kamera <span class="seg" id="camSeg"><button data-c="overview" class="on">Genel</button><button data-c="platform">Peron</button><button data-c="top">Kuşbakışı</button><button data-c="follow">Treni izle</button></span></span>
+  <button id="boardToggle">Peron durumu</button>
+</div>
+<div class="hint">Sürükleyerek döndürün, tekerlekle yakınlaştırın</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const DEST=[['İstanbul','#d1495b'],['Konya','#00a5a8'],['Eskişehir','#e3a21a'],['Sivas','#8a63d2'],['Karaman','#3aa655']];
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,p)=>a+(b-a)*p;
+
+// ---------- sahne ----------
+const stage=$('stage');
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+stage.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(45,1,0.5,2500);
+
+const hemi=new THREE.HemisphereLight(0xdfeeff,0x6b6455,0.75); scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff3e0,1.05);
+sun.position.set(-80,140,60); sun.castShadow=true;
+sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-130,right:130,top:130,bottom:-130,near:10,far:400});
+sun.shadow.bias=-0.0008;
+sun.target.position.set(0,0,-20); scene.add(sun); scene.add(sun.target);
+
+function applyTheme(){
+  const dark=matchMedia('(prefers-color-scheme: dark)').matches && document.documentElement.getAttribute('data-theme')!=='light' || document.documentElement.getAttribute('data-theme')==='dark';
+  const sky=dark?0x1b2a44:0xbcd3ea;
+  scene.background=new THREE.Color(sky); scene.fog=new THREE.Fog(sky,260,900);
+  hemi.intensity=dark?0.45:0.75; sun.intensity=dark?0.45:1.05;
+  sun.color.set(dark?0xb8c6ff:0xfff3e0);
+  lampMat.emissiveIntensity=dark?1.6:0.3;
+}
+const M=(c,o={})=>new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:.8,metalness:.05},o));
+const lampMat=M(0xfff2c4,{emissive:0xffe08a,emissiveIntensity:.3});
+
+function box(w,h,d,mat,x,y,z,cast=true,recv=true){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=recv;scene.add(m);return m;}
+
+// zemin
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(1600,1600),M(0x9aa39a));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+box(70,0.05,260,M(0xb7b4ad),0,0.02,-40,false,true);
+
+// hatlar ve peronlar
+const TRACKS=[{x:-14,side:1,plat:0},{x:-6,side:-1,plat:0},{x:6,side:1,plat:1},{x:14,side:-1,plat:1}];
+const PLATS=[{x:-10},{x:10}];
+const P_TOP=1.1, STOP_Z=48, FAR_Z=-470, BUILD_Z=55;
+const ballast=M(0x7d776e), rail=M(0x5b5f66,{metalness:.6,roughness:.4}), sleeperM=M(0x6a5a4a);
+for(const t of TRACKS){
+  box(3.8,0.22,520,ballast,t.x,0.11,-208,false,true);
+  box(0.12,0.16,520,rail,t.x-0.72,0.3,-208,false,true);
+  box(0.12,0.16,520,rail,t.x+0.72,0.3,-208,false,true);
+  // tampon
+  box(2.4,1.2,0.6,M(0xc8102e),t.x,0.8,51.5);
+}
+// traversler
+{const g=new THREE.BoxGeometry(2.6,0.1,0.35);const n=TRACKS.length*170;const im=new THREE.InstancedMesh(g,sleeperM,n);const d=new THREE.Object3D();let k=0;
+ for(const t of TRACKS)for(let i=0;i<170;i++){d.position.set(t.x,0.24,50-i*3);d.updateMatrix();im.setMatrixAt(k++,d.matrix);} im.receiveShadow=true; scene.add(im);}
+const platM=M(0xd6d1c7), edgeM=M(0xf2c200,{roughness:.6}), benchM=M(0x3d5a80);
+for(const p of PLATS){
+  box(5,P_TOP,150,platM,p.x,P_TOP/2,-20);
+  box(0.25,0.02,150,edgeM,p.x-1.9,P_TOP+0.01,-20,false,true);
+  box(0.25,0.02,150,edgeM,p.x+1.9,P_TOP+0.01,-20,false,true);
+  for(let z=40;z>-90;z-=18){
+    const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,4.2,8),M(0x4a5260,{metalness:.5}));pole.position.set(p.x,P_TOP+2.1,z);pole.castShadow=true;scene.add(pole);
+    const lamp=new THREE.Mesh(new THREE.SphereGeometry(0.28,12,10),lampMat);lamp.position.set(p.x,P_TOP+4.3,z);scene.add(lamp);
+    box(0.5,0.45,2,benchM,p.x,P_TOP+0.25,z-6);
+  }
+}
+// çatı: kemerli cam
+const R=29.2, CY=-10.2, A0=Math.atan2(19.2,22);
+function arcShape(r1,r2){const s=new THREE.Shape();s.moveTo(Math.cos(A0)*r2,CY+Math.sin(A0)*r2);s.absarc(0,CY,r2,A0,Math.PI-A0,false);s.lineTo(Math.cos(Math.PI-A0)*r1,CY+Math.sin(Math.PI-A0)*r1);s.absarc(0,CY,r1,Math.PI-A0,A0,true);return s;}
+const glass=new THREE.Mesh(new THREE.ExtrudeGeometry(arcShape(R-0.08,R+0.08),{depth:132,bevelEnabled:false,curveSegments:48}),
+  new THREE.MeshStandardMaterial({color:0xbfd8ea,transparent:true,opacity:.25,roughness:.1,metalness:.1,side:THREE.DoubleSide,depthWrite:false}));
+glass.position.z=-80; scene.add(glass);
+const ribM=M(0x8a94a3,{metalness:.6,roughness:.4});
+const ribG=new THREE.ExtrudeGeometry(arcShape(R-0.5,R+0.15),{depth:0.5,bevelEnabled:false,curveSegments:48});
+for(let z=-80;z<=52;z+=12){
+  const rib=new THREE.Mesh(ribG,ribM);rib.position.z=z;rib.castShadow=true;scene.add(rib);
+  for(const sx of [-22,22]){const c=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.45,9,10),ribM);c.position.set(sx,4.5,z+0.25);c.castShadow=true;scene.add(c);}
+}
+for(const sx of [-22,22]) box(0.5,0.5,132,ribM,sx,9,-14);
+
+// gar binası
+function facadeTex(){
+  const c=document.createElement('canvas');c.width=1536;c.height=420;const g=c.getContext('2d');
+  g.fillStyle='#d9dde3';g.fillRect(0,0,1536,420);
+  g.fillStyle='#5b7b9e';for(let x=40;x<1500;x+=58)for(let y=110;y<300;y+=46)g.fillRect(x,y,46,36);
+  g.fillStyle='#1f4e9c';g.fillRect(0,18,1536,74);
+  g.fillStyle='#ffffff';g.font='700 56px "Barlow Condensed", "Arial Narrow", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('ANKARA GARI',768,56);
+  g.fillStyle='#1c2430';
+  for(const px of [-10,10]){const u=(px+26)/52*1536;g.fillRect(u-130,300,260,120);}
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return t;
+}
+{
+  const wall=M(0xd9dde3);
+  const bm=[wall,wall,M(0x9aa3ad),wall,wall,new THREE.MeshStandardMaterial({map:facadeTex(),roughness:.7})];
+  const b=new THREE.Mesh(new THREE.BoxGeometry(52,14,26),bm);b.position.set(0,7,BUILD_Z+13);b.castShadow=true;b.receiveShadow=true;scene.add(b);
+  box(56,0.6,30,M(0x8f99a6),0,14.3,BUILD_Z+13);
+}
+// peron tabelaları
+function textSprite(text,bg,fg,w=256,h=80,scale=4){
+  const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+  const draw=(txt,b)=>{g.clearRect(0,0,w,h);g.fillStyle=b;g.beginPath();g.roundRect?g.roundRect(4,4,w-8,h-8,12):g.rect(4,4,w-8,h-8);g.fill();g.fillStyle=fg;g.font='700 '+Math.round(h*0.5)+'px "Barlow Condensed", "Arial Narrow", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(txt,w/2,h/2+2);tex.needsUpdate=true;};
+  const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:true}));s.scale.set(scale,scale*h/w,1);
+  draw(text,bg);s.userData.draw=draw;scene.add(s);return s;
+}
+PLATS.forEach((p,i)=>{for(const z of [30,-20,-70]){const s=textSprite(`${i*2+1}  ◂  ▸  ${i*2+2}`,'#1f4e9c','#ffffff',256,80,3.4);s.position.set(p.x,P_TOP+5.2,z);}});
+
+// ---------- tren ----------
+const bodyM=M(0xf4f5f7,{roughness:.45,metalness:.15}), winM=M(0x22303f,{roughness:.2,metalness:.4}), bogieM=M(0x2b2f36), roofM=M(0xb9c0c8,{metalness:.3}), leafM=M(0x9aa5b1,{metalness:.2}), gapM=M(0x101820);
+const CARS=4, CAR_L=20, GAP=0.5;
+const carCenter=i=>-4-i*(CAR_L+GAP)-CAR_L/2;
+function makeTrain(){
+  const g=new THREE.Group(); const stripeM=M(0xd1495b,{roughness:.5}); const doors=[];
+  const add=(geo,mat,x,y,z,sx=1,sy=1,sz=1)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy,sz);m.castShadow=true;g.add(m);return m;};
+  const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d), S=new THREE.SphereGeometry(1,24,16);
+  for(let i=0;i<CARS;i++){
+    const cz=carCenter(i);
+    add(B(3,3.4,CAR_L),bodyM,0,2.5,cz);
+    add(B(3.04,0.85,CAR_L-1),winM,0,3.25,cz);
+    add(B(3.04,0.2,CAR_L-1),stripeM,0,2.3,cz);
+    add(B(2.4,0.3,CAR_L-1.5),roofM,0,4.3,cz);
+    add(B(2.2,0.6,3),bogieM,0,0.6,cz-6.5); add(B(2.2,0.6,3),bogieM,0,0.6,cz+6.5);
+    if(i<CARS-1) add(B(2.4,3,GAP+0.2),gapM,0,2.4,cz-CAR_L/2-GAP/2);
+    for(const dz of [-5.5,5.5]) for(const sd of [-1,1]){
+      add(B(0.03,2.3,1.5),gapM,sd*1.505,2.05,cz+dz);
+      const l1=add(B(0.04,2.3,0.74),leafM,sd*1.53,2.05,cz+dz-0.37);
+      const l2=add(B(0.04,2.3,0.74),leafM,sd*1.53,2.05,cz+dz+0.37);
+      doors.push({l1,l2,z:cz+dz,side:sd});
+    }
+  }
+  // burunlar
+  const frontZ=-4, rearZ=carCenter(CARS-1)-CAR_L/2;
+  add(S,bodyM,0,2.45,frontZ,1.5,1.7,5); add(S,winM,0,3.05,frontZ+0.6,1.32,0.72,4.3); add(S,stripeM,0,2.2,frontZ+0.2,1.52,0.12,4.85);
+  add(S,bodyM,0,2.45,rearZ,1.5,1.7,5); add(S,winM,0,3.05,rearZ-0.6,1.32,0.72,4.3); add(S,stripeM,0,2.2,rearZ-0.2,1.52,0.12,4.85);
+  scene.add(g);
+  return {group:g,stripeM,doors};
+}
+const doorLocal=[];for(let i=0;i<CARS;i++)for(const dz of [-5.5,5.5])doorLocal.push(carCenter(i)+dz);
+
+// ---------- yolcular ----------
+const MAXP=700;
+const bodyIM=new THREE.InstancedMesh(new THREE.CylinderGeometry(0.26,0.3,1.1,8),new THREE.MeshStandardMaterial({roughness:.8}),MAXP);
+const headIM=new THREE.InstancedMesh(new THREE.SphereGeometry(0.21,10,8),M(0xe0b896),MAXP);
+bodyIM.castShadow=true; headIM.castShadow=true; scene.add(bodyIM); scene.add(headIM);
+const CLOTH=[0x2e4057,0xd1495b,0x00798c,0xedae49,0x66a182,0x8d6a9f,0x3b3b3b,0xf4f1de,0x5b8bd6,0xb5651d];
+const people=[]; const free=[]; for(let i=MAXP-1;i>=0;i--) free.push(i);
+const col=new THREE.Color();
+for(let i=0;i<MAXP;i++){col.setHex(CLOTH[i%CLOTH.length]);bodyIM.setColorAt(i,col);}
+const tones=[0xe0b896,0xc68f6a,0x8d5a3b,0xf1cfb0];for(let i=0;i<MAXP;i++){col.setHex(tones[i%4]);headIM.setColorAt(i,col);}
+function spawnPerson(x,z,path,role,track,onDone){
+  if(!free.length) return null;
+  const p={slot:free.pop(),x,z,path,role,track,onDone,speed:rand(4.6,6.2),phase:Math.random()*6,waiting:false};
+  col.setHex(CLOTH[Math.floor(Math.random()*CLOTH.length)]);bodyIM.setColorAt(p.slot,col);bodyIM.instanceColor.needsUpdate=true;
+  people.push(p); return p;
+}
+function killPerson(p){p.dead=true;free.push(p.slot);}
+
+// ---------- hat durum makinesi ----------
+let totalOff=0,totalOn=0,totalDep=0, destIdx=0;
+const tracks=TRACKS.map((t,i)=>{
+  const tr=makeTrain(); tr.group.position.set(t.x,0,FAR_Z);
+  const label=textSprite('','#000','#fff',320,80,6); label.visible=false;
+  return Object.assign({},t,{i,train:tr,label,state:'idle',timer:rand(1,10)+i*4,z:FAR_Z,doorOpen:0,boarders:[],alighting:0,next:null});
+});
+function planNext(T){
+  const d=DEST[destIdx++%DEST.length];
+  T.next={dest:d[0],color:d[1],nBoard:Math.round(rand(10,26)),nAlight:Math.round(rand(10,26))};
+  T.train.stripeM.color.set(d[1]);
+  T.label.userData.draw('→ '+d[0],d[1]); 
+  // binecek yolcular zamanla gelir
+  T.spawnQueue=[];const window=T.timer+11;
+  for(let k=0;k<T.next.nBoard;k++) T.spawnQueue.push(rand(0,window));
+  T.spawnQueue.sort((a,b)=>a-b); T.spawnClock=0;
+}
+const platX=T=>PLATS[T.plat].x;
+const doorWorldZ=k=>STOP_Z+doorLocal[k];
+function spawnBoarder(T){
+  const k=Math.floor(Math.random()*doorLocal.length), dz=doorWorldZ(k);
+  const sx=T.x+T.side*rand(2.4,3.2), szz=dz+rand(-2.2,2.2), px=platX(T)+rand(-0.6,0.6);
+  const p=spawnPerson(px,BUILD_Z+2,[[px,szz],[sx,szz]],'board',T);
+  if(!p) return; p.door=k; T.boarders.push(p);
+  p.onDone=()=>{ p.waiting=true; if(T.state==='boarding') sendToDoor(p,T); };
+}
+function sendToDoor(p,T){
+  const dz=doorWorldZ(p.door);
+  p.waiting=false; p.path=[[T.x+T.side*1.9,dz],[T.x+T.side*0.6,dz]];
+  p.onDone=()=>{ killPerson(p); totalOn++; T.boarders=T.boarders.filter(q=>q!==p); };
+}
+function spawnAlighter(T){
+  const k=Math.floor(Math.random()*doorLocal.length), dz=doorWorldZ(k), px=platX(T)+rand(-0.8,0.8);
+  const p=spawnPerson(T.x+T.side*0.6,dz,[[T.x+T.side*1.9,dz],[px,dz+rand(-1,1)],[px,BUILD_Z+3]],'alight',T);
+  if(!p) return; p.speed*=1.05; p.onDone=()=>{killPerson(p);totalOff++;};
+}
+const easeOut=p=>1-Math.pow(1-p,3), easeIn=p=>p*p*p;
+function updateTrack(T,dt){
+  if(!T.next) planNext(T);
+  // binecek yolcuları üret
+  if(T.spawnQueue){T.spawnClock+=dt;while(T.spawnQueue.length&&T.spawnQueue[0]<=T.spawnClock){T.spawnQueue.shift();spawnBoarder(T);}}
+  T.timer-=dt;
+  switch(T.state){
+    case 'idle': if(T.timer<=0){T.state='arriving';T.t=0;T.label.visible=true;} break;
+    case 'arriving': T.t+=dt/11; T.z=lerp(FAR_Z,STOP_Z,easeOut(Math.min(1,T.t))); if(T.t>=1){T.state='opening';T.timer=1.2;} break;
+    case 'opening': T.doorOpen=Math.min(1,T.doorOpen+dt/1.2); if(T.timer<=0){T.state='alighting';T.toAlight=T.next.nAlight;T.timer=0;} break;
+    case 'alighting':
+      if(T.toAlight>0&&T.timer<=0){spawnAlighter(T);T.toAlight--;T.timer=rand(0.12,0.35);}
+      if(T.toAlight<=0&&T.timer<=-2.5){T.state='boarding';for(const p of T.boarders) if(p.waiting) sendToDoor(p,T);} break;
+    case 'boarding':
+      if(T.boarders.length===0&&(!T.spawnQueue||!T.spawnQueue.length)){T.state='closing';T.timer=1.2;} break;
+    case 'closing': T.doorOpen=Math.max(0,T.doorOpen-dt/1.2); if(T.timer<=0){T.state='ready';T.timer=1.5;} break;
+    case 'ready': if(T.timer<=0){T.state='departing';T.t=0;} break;
+    case 'departing': T.t+=dt/12; T.z=lerp(STOP_Z,FAR_Z,easeIn(Math.min(1,T.t)));
+      if(T.t>=1){T.state='idle';T.timer=rand(6,16);T.label.visible=false;totalDep++;T.next=null;} break;
+  }
+  T.train.group.position.z=T.z;
+  for(const d of T.train.doors){ if(d.side!==T.side) continue; d.l1.position.z=d.z-0.37-T.doorOpen*0.72; d.l2.position.z=d.z+0.37+T.doorOpen*0.72; }
+  T.label.position.set(T.x,7.2,T.z-14);
+}
+
+// ---------- kamera ----------
+const PRESETS={overview:{az:-0.75,el:0.5,dist:150,tx:0,ty:2,tz:-15},platform:{az:0.12,el:0.06,dist:68,tx:-2,ty:3,tz:-18},top:{az:0.0001,el:1.42,dist:200,tx:0,ty:0,tz:-20},follow:null};
+let cam={...PRESETS.overview}, goal={...PRESETS.overview}, mode='overview', followT=null;
+function setCam(c){mode=c;document.querySelectorAll('#camSeg button').forEach(b=>b.classList.toggle('on',b.dataset.c===c));
+  if(c==='follow'){followT=tracks.find(t=>t.state==='arriving')||tracks.find(t=>t.state!=='idle'&&t.state!=='departing')||tracks[0];goal={...cam,az:0.9,el:0.22,dist:45};}
+  else goal={...PRESETS[c]};}
+document.querySelectorAll('#camSeg button').forEach(b=>b.onclick=()=>setCam(b.dataset.c));
+const ptrs=new Map(); let pinch0=0;
+renderer.domElement.addEventListener('pointerdown',e=>{renderer.domElement.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}});
+renderer.domElement.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return; const p=ptrs.get(e.pointerId); const dx=e.clientX-p.x, dy=e.clientY-p.y; p.x=e.clientX;p.y=e.clientY;
+  if(ptrs.size===1){goal.az-=dx*0.006;goal.el=clamp(goal.el+dy*0.005,0.03,1.45);cam.az=goal.az;cam.el=goal.el;}
+  else if(ptrs.size===2){const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0){goal.dist=clamp(goal.dist*pinch0/d,20,340);}pinch0=d;}
+});
+const up=e=>{ptrs.delete(e.pointerId);pinch0=0;};
+renderer.domElement.addEventListener('pointerup',up);renderer.domElement.addEventListener('pointercancel',up);
+renderer.domElement.addEventListener('wheel',e=>{e.preventDefault();goal.dist=clamp(goal.dist*(1+e.deltaY*0.0012),20,340);},{passive:false});
+function updateCam(dt){
+  if(mode==='follow'&&followT){goal.tx=followT.x;goal.ty=3;goal.tz=followT.z-30; if(followT.state==='idle'){const n=tracks.find(t=>t.state==='arriving');if(n)followT=n;}}
+  const k=1-Math.pow(0.02,dt);
+  for(const key of ['az','el','dist','tx','ty','tz']) cam[key]=lerp(cam[key],goal[key],k);
+  const ce=Math.cos(cam.el);
+  camera.position.set(cam.tx+Math.sin(cam.az)*ce*cam.dist,cam.ty+Math.sin(cam.el)*cam.dist,cam.tz+Math.cos(cam.az)*ce*cam.dist);
+  camera.lookAt(cam.tx,cam.ty,cam.tz);
+}
+
+// ---------- arayüz ----------
+let running=true, speed=1, clockMin=8*60;
+$('play').onclick=()=>{running=!running;$('play').textContent=running?'Duraklat':'Devam et';$('play').classList.toggle('on',running);};
+document.querySelectorAll('#speedSeg button').forEach(b=>b.onclick=()=>{speed=+b.dataset.v;document.querySelectorAll('#speedSeg button').forEach(x=>x.classList.toggle('on',x===b));});
+$('boardToggle').onclick=()=>$('board').classList.toggle('open');
+const ST={idle:['Tren bekleniyor','s-idle'],arriving:['Gara giriyor','s-come'],opening:['Kapılar açılıyor','s-in'],alighting:['Yolcu iniyor','s-in'],boarding:['Yolcu biniyor','s-in'],closing:['Kapılar kapanıyor','s-out'],ready:['Kalkışa hazır','s-out'],departing:['Kalkıyor','s-out']};
+function fmt(m){m=Math.floor(m)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+function updateBoard(){
+  $('clock').textContent=fmt(clockMin);
+  $('rows').innerHTML=tracks.map(T=>{const s=ST[T.state];const n=T.next;const wait=T.boarders.filter(p=>p.waiting).length;
+    const extra=(T.state==='idle'||T.state==='arriving')&&wait?` · ${wait} kişi bekliyor`:'';
+    return `<tr><td>${T.i+1}</td><td>${n?`<span class="dot" style="background:${n.color}"></span>${n.dest}`:'–'}</td><td class="st ${s[1]}">${s[0]}${extra}</td></tr>`;}).join('');
+  $('tOff').textContent=totalOff;$('tOn').textContent=totalOn;$('tDep').textContent=totalDep;
+}
+
+// ---------- döngü ----------
+const dummy=new THREE.Object3D();
+function updatePeople(dt){
+  for(const p of people){
+    if(p.dead) continue;
+    if(p.path.length){
+      const [tx,tz]=p.path[0]; const dx=tx-p.x, dz=tz-p.z, d=Math.hypot(dx,dz), s=p.speed*dt;
+      if(d<=s){p.x=tx;p.z=tz;p.path.shift(); if(!p.path.length&&p.onDone) p.onDone();}
+      else {p.x+=dx/d*s;p.z+=dz/d*s;p.dir=Math.atan2(dx,dz);}
+      p.phase+=dt*11;
+    }
+  }
+  for(let i=people.length-1;i>=0;i--) if(people[i].dead) people.splice(i,1);
+}
+function writeMatrices(){
+  for(let i=0;i<MAXP;i++){dummy.position.set(0,-50,0);dummy.scale.set(0.001,0.001,0.001);dummy.updateMatrix();bodyIM.setMatrixAt(i,dummy.matrix);headIM.setMatrixAt(i,dummy.matrix);}
+  dummy.scale.set(1,1,1);
+  for(const p of people){
+    const bob=p.path.length?Math.abs(Math.sin(p.phase))*0.07:0;
+    dummy.position.set(p.x,P_TOP+0.55+bob,p.z);dummy.updateMatrix();bodyIM.setMatrixAt(p.slot,dummy.matrix);
+    dummy.position.set(p.x,P_TOP+1.33+bob,p.z);dummy.updateMatrix();headIM.setMatrixAt(p.slot,dummy.matrix);
+  }
+  bodyIM.instanceMatrix.needsUpdate=true; headIM.instanceMatrix.needsUpdate=true;
+}
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+window.addEventListener('resize',resize);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+let prev=performance.now(), lastUI=0;
+function loop(now){
+  const real=Math.min(0.05,(now-prev)/1000); prev=now;
+  const dt=running?real*speed:0;
+  if(dt>0){
+    const n=Math.ceil(dt/0.02); const h=dt/n;
+    for(let k=0;k<n;k++){ for(const T of tracks) updateTrack(T,h); updatePeople(h); }
+    writeMatrices();
+    clockMin+=dt*0.5;
+  } else writeMatrices();
+  updateCam(real);
+  renderer.render(scene,camera);
+  if(now-lastUI>250){updateBoard();lastUI=now;}
+  requestAnimationFrame(loop);
+}
+applyTheme(); resize(); updateCam(1); requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
